@@ -23,7 +23,7 @@ void Agent::agentLoop() {
             contest.room = room;
             contest.time = time;
 
-            this->sendInvite(contest;
+            this->sendInvite(contest);
             this->waitForAnswers();
         } else {
             contest = this->waitForInvite();

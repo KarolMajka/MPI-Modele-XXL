@@ -18,7 +18,7 @@ enum MessageTag {
 
 struct Contest {
     int room;
-    int time
+    int time;
 };
 
 struct Message {

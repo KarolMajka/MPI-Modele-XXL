@@ -13,17 +13,18 @@ enum MessageTag {
     Invite,
     AnswerInvite,
     Room,
-    AnswerRoom
+    AnswerRoom,
+    StartContest
 };
 
 struct Contest {
     int room;
-    int time;
+    time_t time;
 };
 
 struct Message {
     Contest contest;
-    int processID;
+    int processId;
     int lamportClock;
     bool answer;
 };
@@ -44,12 +45,13 @@ public:
     int size;
     int rank;
     Lamport(int size, int rank);
-    void sendMessage(Message message, MessageTag tag);
+    void broadcast(Message message, MessageTag tag);
     void increment();
     int getTimestamp();
+    void sendMessage(int to, Message message, MessageTag tag);
+
 
 protected:
-    void sendMessage(int to, Message message, MessageTag tag);
 
 };
 

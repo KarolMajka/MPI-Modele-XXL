@@ -10,7 +10,7 @@ Lamport::Lamport(int size, int rank) {
     this->rank = rank;
 }
 
-void Lamport::sendMessage(Message message, MessageTag tag) {
+void Lamport::broadcast(Message message, MessageTag tag) {
     for(int i = 0; i < size; i++) {
         if (i != rank) {
             this->sendMessage(i, message, tag);

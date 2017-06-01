@@ -11,6 +11,8 @@
 Agent::Agent(int size, int rank, int roomCount) {
     this->lamport = new Lamport(size, rank);
     this->roomCount = roomCount;
+    this->currentContest.room = NULL;
+    this->currentContest.time = NULL;
     srand(time(NULL)+rank*size*1000);
 }
 
@@ -62,7 +64,8 @@ void Agent::doStuff() {
             if (this->currentContest.time) {
                 if (this->currentContest.time <= time(0)) {
                     this->state = REST;
-                    this->currentContest = NULL;
+                    this->currentContest.time = NULL;
+                    this->currentContest.room = NULL;
                     this->currentRoom = -1;
                     this->selectedRoom = -1;
                     this->roomCount = -1;

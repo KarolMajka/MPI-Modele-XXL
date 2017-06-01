@@ -26,7 +26,7 @@ protected:
 
     time_t restTill = 0;
 
-    Contest currentContest = NULL;
+    Contest currentContest;
     State state = IDLE;
     Lamport *lamport;
 

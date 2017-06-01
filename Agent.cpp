@@ -11,8 +11,8 @@
 Agent::Agent(int size, int rank, int roomCount) {
     this->lamport = new Lamport(size, rank);
     this->roomCount = roomCount;
-    this->currentContest.room = NULL;
-    this->currentContest.time = NULL;
+    this->currentContest.room = -1;
+    this->currentContest.time = -1;
     srand(time(NULL)+rank*size*1000);
 }
 
@@ -35,10 +35,11 @@ void Agent::doStuff() {
                 Contest c;
                 c.room = this->currentRoom;
                 c.time = time(0) + randomTime();
-
+                this->currentContest.time = c.time;
                 startContest(c);
 
             }
+            break;
         }
 
         case WAITING_FOR_ROOM: {
@@ -61,11 +62,11 @@ void Agent::doStuff() {
         }
 
         case BUSY: {
-            if (this->currentContest.time) {
+            if (this->currentContest.time != -1) {
                 if (this->currentContest.time <= time(0)) {
                     this->state = REST;
-                    this->currentContest.time = NULL;
-                    this->currentContest.room = NULL;
+                    this->currentContest.time = -1;
+                    this->currentContest.room = -1;
                     this->currentRoom = -1;
                     this->selectedRoom = -1;
                     this->roomCount = -1;
@@ -79,6 +80,7 @@ void Agent::doStuff() {
             if (this->restTill <= time(0)) {
                 this->state = IDLE;
             }
+            break;
         }
 
         case IDLE: {
@@ -86,6 +88,7 @@ void Agent::doStuff() {
 
                 askForRoom();
             }
+            break;
         }
 
 
@@ -218,7 +221,7 @@ int Agent::randomRoom() {
 }
 
 int Agent::randomTime() {
-    return rand() % 25000 + 5000;
+    return rand() % 25 + 5;
 }
 
 bool Agent::roomIsFree(int room) {

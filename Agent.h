@@ -35,6 +35,7 @@ protected:
     void askForRoom();
     int randomTime();
     bool wannaJoin(Message m);
+    bool shouldBeFirst(Message m);
     void handleMsg();
     void doStuff();
     void answerRoom(Message m);

@@ -120,6 +120,10 @@ void Agent::answerInvite(Message m, bool answer) {
     lamport->sendMessage(m.processId, msg, MessageTag(AnswerInvite));
 }
 
+bool Agent::shouldBeFirst(Message m) {
+    return true;
+}
+
 void Agent::answerRoom(Message m) {
     // true - pokoj jest wolny
 
@@ -127,8 +131,14 @@ void Agent::answerRoom(Message m) {
     msg.contest = m.contest;
     msg.lamportClock = this->lamport->getTimestamp();
     msg.processId = this->lamport->rank;
-    msg.answer = msg.contest.room != this->currentRoom;
-    lamport->sendMessage(m.processId, msg, MessageTag(AnswerInvite));
+
+    if (msg.contest.room != this->currentRoom) {
+        msg.answer = true;
+    } else {
+        msg.answer = shouldBeFirst(m);
+    }
+
+    lamport->sendMessage(m.processId, msg, MessageTag(AnswerRoom));
 }
 
 

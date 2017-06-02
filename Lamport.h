@@ -52,7 +52,7 @@ public:
 
 
 protected:
-
+    void send(int to, Message message, MessageTag tag);
 };
 
 

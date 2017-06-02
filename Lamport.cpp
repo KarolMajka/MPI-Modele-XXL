@@ -13,9 +13,10 @@ Lamport::Lamport(int size, int rank) {
 
 void Lamport::broadcast(Message message, MessageTag tag) {
     this->increment();
+    message.lamportClock = this->getTimestamp();
     for(int i = 0; i < size; i++) {
         if (i != rank) {
-            this->sendMessage(i, message, tag);
+            this->send(i, message, tag);
         }
     }
 }
@@ -28,6 +29,12 @@ int Lamport::getTimestamp() {
 }
 
 void Lamport::sendMessage(int to, Message message, MessageTag tag) {
+    this->increment();
+    message.lamportClock = this->getTimestamp();
+    send(to, message, tag);
+}
+
+void Lamport::send(int to, Message message, MessageTag tag) {
     MPI_Send(&message, sizeof(message), MPI_BYTE, to, tag, MPI_COMM_WORLD);
 }
 

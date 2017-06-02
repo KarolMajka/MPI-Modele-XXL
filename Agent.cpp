@@ -181,6 +181,7 @@ void Agent::handleAnswerRoom(Message m) {
 void Agent::handleStartContest(Message m) {
     if(m.contest.room == this->currentContest.room) {
         this->state = BUSY;
+        this->currentContest.time = m.contest.time;
     }
 
 }

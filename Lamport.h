@@ -39,7 +39,7 @@ public:
 class Lamport {
 
 protected:
-    int timestamp = 0;
+    int timestamp;
 
 public:
     int size;

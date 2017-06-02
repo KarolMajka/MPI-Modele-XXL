@@ -8,6 +8,7 @@
 Lamport::Lamport(int size, int rank) {
     this->size = size;
     this->rank = rank;
+    this->timestamp = 0;
 }
 
 void Lamport::broadcast(Message message, MessageTag tag) {

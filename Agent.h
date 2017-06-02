@@ -20,14 +20,14 @@ enum State {
 
 class Agent {
 protected:
-    int selectedRoom = -1;
-    int currentRoom = -1;
-    int roomCount = 0;
+    int selectedRoom;
+    int answerCount;
+    int roomCount;
 
-    time_t restTill = 0;
+    time_t restTill;
 
     Contest currentContest;
-    State state = IDLE;
+    State state;
     Lamport *lamport;
 
     bool wannaCreateContest();
@@ -38,19 +38,14 @@ protected:
     bool shouldBeFirst(Message m);
     void handleMsg();
     void doStuff();
-    void answerRoom(Message m);
+    void handleRoom(Message m);
     void startContest(Contest c);
     void handleInvite(Message m);
     void handleStartContest(Message m);
     void handleAnswerInvite(Message m);
     void handleAnswerRoom(Message m);
     void answerInvite(Message m, bool answer);
-    bool roomIsFree(int room);
     void sendInvite(Contest contest);
-    void waitForAnswers();
-    Contest waitForInvite();
-    void takePart(Contest contest);
-    void restAfterContest();
 
 public:
     Agent(int size, int rank, int roomCount);

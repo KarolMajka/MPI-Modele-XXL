@@ -20,6 +20,7 @@ enum State {
 
 class Agent {
 protected:
+    int lamportClockOnRequest;
     int selectedRoom;
     int answerCount;
     int roomCount;

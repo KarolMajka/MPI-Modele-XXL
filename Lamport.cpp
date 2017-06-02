@@ -28,6 +28,11 @@ int Lamport::getTimestamp() {
     return this->timestamp;
 }
 
+void Lamport::setMax(int timestamp) {
+    this->timestamp = std::max(this->timestamp, timestamp);
+    this->increment();
+}
+
 void Lamport::sendMessage(int to, Message message, MessageTag tag) {
     this->increment();
     message.lamportClock = this->getTimestamp();
@@ -37,4 +42,6 @@ void Lamport::sendMessage(int to, Message message, MessageTag tag) {
 void Lamport::send(int to, Message message, MessageTag tag) {
     MPI_Send(&message, sizeof(message), MPI_BYTE, to, tag, MPI_COMM_WORLD);
 }
+
+
 

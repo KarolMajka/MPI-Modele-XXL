@@ -197,6 +197,8 @@ void Agent::handleMsg() {
         }
         Message m;
         MPI_Recv(&m, sizeof(Message), MPI_BYTE, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+        this->lamport->setMax(m.lamportClock);
+
         switch (status.MPI_TAG) {
             case Invite: {
                 handleInvite(m);

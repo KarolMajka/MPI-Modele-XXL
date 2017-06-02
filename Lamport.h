@@ -49,7 +49,7 @@ public:
     void increment();
     int getTimestamp();
     void sendMessage(int to, Message message, MessageTag tag);
-
+    void setMax(int timestamp);
 
 protected:
     void send(int to, Message message, MessageTag tag);

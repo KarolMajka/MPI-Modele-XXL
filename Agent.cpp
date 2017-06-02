@@ -108,8 +108,10 @@ void Agent::askForRoom() {
     msg.contest = c;
     msg.lamportClock = this->lamport->getTimestamp();
     msg.processId = this->lamport->rank;
-
     lamport->broadcast(msg, MessageTag(Room));
+
+    printf("%d: %d wyslal broadcast - Room o pokoj %d\n",
+           this->lamport->getTimestamp(), this->lamport->rank, c.room);
 
     this->state = WAITING_FOR_ROOM;
     this->answerCount = lamport->size - 1;
@@ -122,6 +124,9 @@ void Agent::answerInvite(Message m, bool answer) {
     msg.processId = this->lamport->rank;
     msg.answer = answer;
     lamport->sendMessage(m.processId, msg, MessageTag(AnswerInvite));
+
+    printf("%d: %d wyslal wiadomosc do %d - AnswerInvite o pokoj %d wartosc %d\n",
+           this->lamport->getTimestamp(), this->lamport->rank, m.processId, m.contest.room, answer);
 }
 
 bool Agent::shouldBeFirst(Message m) {
@@ -141,13 +146,19 @@ void Agent::handleRoom(Message m) {
     msg.lamportClock = this->lamport->getTimestamp();
     msg.processId = this->lamport->rank;
 
-    if (msg.contest.room != this->currentContest.room) {
-        msg.answer = true;
-    } else {
+    if (msg.contest.room == this->currentContest.room) {
+        msg.answer = false;
+    } else if(msg.contest.room == this->selectedRoom) {
         msg.answer = shouldBeFirst(m);
+    } else {
+        msg.answer = true;
     }
 
     lamport->sendMessage(m.processId, msg, MessageTag(AnswerRoom));
+
+
+    printf("%d: %d wyslal wiadomosc do %d - AnswerRoom o pokoj %d wartosc %d\n",
+           this->lamport->getTimestamp(), this->lamport->rank, m.processId, m.contest.room, msg.answer);
 }
 
 
@@ -198,26 +209,37 @@ void Agent::handleMsg() {
         }
         Message m;
         MPI_Recv(&m, sizeof(Message), MPI_BYTE, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+
         this->lamport->setMax(m.lamportClock);
 
         switch (status.MPI_TAG) {
             case Invite: {
+                printf("%d: %d otrzymal wiadomosc od %d - Invite do pokoju %d\n",
+                       this->lamport->getTimestamp(), this->lamport->rank, m.processId, m.contest.room);
                 handleInvite(m);
                 break;
             }
             case Room: {
+                printf("%d: %d otrzymal wiadomosc od %d - Room o pokoj %d\n",
+                       this->lamport->getTimestamp(), this->lamport->rank, m.processId, m.contest.room);
                 handleRoom(m);
                 break;
             }
             case AnswerInvite: {
+                printf("%d: %d otrzymal wiadomosc od %d - AnswerInvite o odpowiedzi %d\n",
+                       this->lamport->getTimestamp(), this->lamport->rank, m.processId, m.answer);
                 handleAnswerInvite(m);
                 break;
             }
             case AnswerRoom: {
+                printf("%d: %d otrzymal wiadomosc od %d - AnswerRoom o odpowiedzi %d\n",
+                       this->lamport->getTimestamp(), this->lamport->rank, m.processId, m.answer);
                 handleAnswerRoom(m);
                 break;
             }
             case StartContest: {
+                printf("%d: %d otrzymal wiadomosc od %d - StartContest do pokoju %d\n",
+                       this->lamport->getTimestamp(), this->lamport->rank, m.processId, m.contest.room);
                 handleStartContest(m);
                 break;
             }
@@ -259,6 +281,10 @@ void Agent::startContest(Contest contest) {
     m.lamportClock = this->lamport->getTimestamp();
     m.processId = this->lamport->rank;
     lamport->broadcast(m, MessageTag(StartContest));
+
+    printf("%d: %d wyslal broadcast - StartContest o pokoj %d\n",
+           this->lamport->getTimestamp(), this->lamport->rank, contest.room);
+
 }
 
 
@@ -268,4 +294,7 @@ void Agent::sendInvite(Contest contest) {
     m.lamportClock = this->lamport->getTimestamp();
     m.processId = this->lamport->rank;
     lamport->broadcast(m, MessageTag(Invite));
+
+    printf("%d: %d wyslal broadcast - Invite do pokoj %d\n",
+           this->lamport->getTimestamp(), this->lamport->rank, contest.room);
 }

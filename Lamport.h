@@ -18,12 +18,12 @@ enum MessageTag {
 };
 
 struct Contest {
+    int id;
     int room;
     time_t time;
 };
 
 struct Message {
-    int org;
     Contest contest;
     int processId;
     int lamportClock;

@@ -2,6 +2,7 @@
 // Created by Karol Majka on 15/05/2017.
 //
 
+#include <zconf.h>
 #include "Agent.h"
 #include "Lamport.h"
 
@@ -10,37 +11,18 @@
 
 Agent::Agent(int size, int rank, int roomCount) {
     this->lamport = new Lamport(size, rank);
-    this->openRooms = (bool*) malloc(sizeof(bool) * size);
     this->roomCount = roomCount;
     this->answerCount = size-1;
     this->selectedRoom = -1;
     this->restTill = 0;
+    this->currentContest.id = -1;
     this->currentContest.room = -1;
     this->currentContest.time = -1;
     this->state = IDLE;
     this->lamportClockOnRequest = -1;
+    this->localId = -1;
     srand(time(NULL)+rank*size*1000);
-    this->restOpenRooms();
-    this->notFree = false;
 }
-
-
-void Agent::restOpenRooms() {
-    for(int i=0; i < this->lamport->size; i++) {
-        this->openRooms[i] = false;
-    }
-    this->openRooms[this->lamport->rank] = true;
-}
-
-bool Agent::isRoomFree() {
-    for(int i=0; i < this->lamport->size; i++) {
-        if (this->openRooms[i] ==  false) {
-            return false;
-        }
-    }
-    return true;
-}
-
 
 
 
@@ -51,6 +33,7 @@ void Agent::agentLoop() {
         if (this->lamport->getTimestamp() > 100) {
             break;
         }
+        sleep(1);
     }
 }
 
@@ -62,6 +45,7 @@ void Agent::doStuff() {
                 this->state = BUSY;
 
                 Contest c;
+                c.id = this->currentContest.id;
                 c.room = this->currentContest.room;
                 c.time = time(0) + randomTime();
                 this->currentContest.time = c.time;
@@ -72,7 +56,7 @@ void Agent::doStuff() {
         }
 
         case WAITING_FOR_ROOM: {
-            if (isRoomFree()) {
+            if (this->answerCount == 0) {
                 this->state = WAITING_FOR_ANSWERS;
                 this->answerCount = lamport->size - 1;
 
@@ -80,11 +64,12 @@ void Agent::doStuff() {
                 this->selectedRoom = -1;
 
                 Contest c;
+                c.id = this->currentContest.id;
                 c.room = this->currentContest.room;
                 c.time = -1;
 
                 sendInvite(c);
-            } else if (this->notFree) {
+            } else if (this->answerCount < 1) {
                 askForRoom();
             }
             break;
@@ -94,6 +79,7 @@ void Agent::doStuff() {
             if (this->currentContest.time != -1) {
                 if (this->currentContest.time <= time(0)) {
                     this->state = REST;
+                    this->currentContest.id = -1;
                     this->currentContest.time = -1;
                     this->currentContest.room = -1;
                     this->selectedRoom = -1;
@@ -124,19 +110,20 @@ void Agent::doStuff() {
 }
 
 void Agent::askForRoom() {
+    this->localId++;
     Message msg;
     Contest c;
-    this->notFree = false;
     this->selectedRoom = this->randomRoom();
     c.room = this->selectedRoom;
-    msg.org = msgId();
+    c.id = this->localId;
+    this->currentContest.id = c.id;
     msg.contest = c;
     msg.lamportClock = this->lamport->getTimestamp();
     msg.processId = this->lamport->rank;
     lamport->broadcast(msg, MessageTag(Room));
 
-    printf("%d: \t %d --> broadcast - Room o pokoj %d\n",
-           this->lamport->getTimestamp(), this->lamport->rank, c.room);
+    printf("%d: \t %d --> broadcast - Room o pokoj %d, id: %d\n",
+           this->lamport->getTimestamp(), this->lamport->rank, c.room, c.id);
 
     this->state = WAITING_FOR_ROOM;
     this->answerCount = lamport->size - 1;
@@ -145,15 +132,14 @@ void Agent::askForRoom() {
 
 void Agent::answerInvite(Message m, bool answer) {
     Message msg;
-    msg.org = m.org;
     msg.contest = m.contest;
     msg.lamportClock = this->lamport->getTimestamp();
     msg.processId = this->lamport->rank;
     msg.answer = answer;
     lamport->sendMessage(m.processId, msg, MessageTag(AnswerInvite));
 
-    printf("%d: \t %d --> wiadomosc do %d - AnswerInvite o pokoj %d wartosc %d\n",
-           this->lamport->getTimestamp(), this->lamport->rank, m.processId, m.contest.room, answer);
+    printf("%d: \t %d --> wiadomosc do %d - AnswerInvite o pokoj %d, id: %d wartosc %d\n",
+           this->lamport->getTimestamp(), this->lamport->rank, m.processId, m.contest.room, m.contest.id, answer);
 }
 
 bool Agent::shouldBeFirst(Message m) {
@@ -169,7 +155,6 @@ void Agent::handleRoom(Message m) {
     // true - pokoj jest wolny
 
     Message msg;
-    msg.org = m.org;
     msg.contest = m.contest;
     msg.lamportClock = this->lamport->getTimestamp();
     msg.processId = this->lamport->rank;
@@ -185,8 +170,8 @@ void Agent::handleRoom(Message m) {
     lamport->sendMessage(m.processId, msg, MessageTag(AnswerRoom));
 
 
-    printf("%d: \t %d --> wiadomosc do %d - AnswerRoom o pokoj %d wartosc %d\n",
-           this->lamport->getTimestamp(), this->lamport->rank, m.processId, m.contest.room, msg.answer);
+    printf("%d: \t %d --> wiadomosc do %d - AnswerRoom o pokoj %d, id: %d wartosc %d\n",
+           this->lamport->getTimestamp(), this->lamport->rank, m.processId, m.contest.room, m.contest.id, msg.answer);
 }
 
 
@@ -199,16 +184,15 @@ void Agent::handleInvite(Message m) {
 }
 
 void Agent::handleAnswerInvite(Message m) {
-    if (this->state == WAITING_FOR_ANSWERS) {
+    if (this->state == WAITING_FOR_ANSWERS && m.contest.id == this->currentContest.id) {
         this->answerCount--;
     }
 }
 
 
 void Agent::handleAnswerRoom(Message m) {
-    if (this->state == WAITING_FOR_ROOM) {
+    if (this->state == WAITING_FOR_ROOM && m.contest.id == this->currentContest.id) {
         if (!m.answer) {
-            this->notFree = true;
             this->answerCount = -1;
         }
         else {
@@ -219,7 +203,7 @@ void Agent::handleAnswerRoom(Message m) {
 }
 
 void Agent::handleStartContest(Message m) {
-    if(m.contest.room == this->currentContest.room) {
+    if(m.contest.id == this->currentContest.id) {
         this->state = BUSY;
         this->currentContest.time = m.contest.time;
     }
@@ -240,32 +224,32 @@ void Agent::handleMsg() {
 
         switch (status.MPI_TAG) {
             case Invite: {
-                printf("%d: \t %d <--  %d - Invite do pokoju %d\n",
-                       this->lamport->getTimestamp(), this->lamport->rank, m.processId, m.contest.room);
+                printf("%d: \t %d <--  %d - Invite do pokoju %d, id: %d\n",
+                       this->lamport->getTimestamp(), this->lamport->rank, m.processId, m.contest.room, m.contest.id);
                 handleInvite(m);
                 break;
             }
             case Room: {
-                printf("%d: \t %d <--  %d - Room o pokoj %d\n",
-                       this->lamport->getTimestamp(), this->lamport->rank, m.processId, m.contest.room);
+                printf("%d: \t %d <--  %d - Room o pokoj %d, id: %d\n",
+                       this->lamport->getTimestamp(), this->lamport->rank, m.processId, m.contest.room, m.contest.id);
                 handleRoom(m);
                 break;
             }
             case AnswerInvite: {
-                printf("%d: \t %d <--  %d - AnswerInvite o odpowiedzi %d\n",
-                       this->lamport->getTimestamp(), this->lamport->rank, m.processId, m.answer);
+                printf("%d: \t %d <--  %d - AnswerInvite o odpowiedzi %d, id: %d\n",
+                       this->lamport->getTimestamp(), this->lamport->rank, m.processId, m.answer, m.contest.id);
                 handleAnswerInvite(m);
                 break;
             }
             case AnswerRoom: {
-                printf("%d: \t %d <--  %d - AnswerRoom o odpowiedzi %d\n",
-                       this->lamport->getTimestamp(), this->lamport->rank, m.processId, m.answer);
+                printf("%d: \t %d <--  %d - AnswerRoom o odpowiedzi %d, id: %d\n",
+                       this->lamport->getTimestamp(), this->lamport->rank, m.processId, m.answer, m.contest.id);
                 handleAnswerRoom(m);
                 break;
             }
             case StartContest: {
-                printf("%d: \t %d <--  %d - StartContest do pokoju %d\n",
-                       this->lamport->getTimestamp(), this->lamport->rank, m.processId, m.contest.room);
+                printf("%d: \t %d <--  %d - StartContest do pokoju %d, id: %d\n",
+                       this->lamport->getTimestamp(), this->lamport->rank, m.processId, m.contest.room, m.contest.id);
                 handleStartContest(m);
                 break;
             }
@@ -294,39 +278,34 @@ bool Agent::wannaJoin(Message m) {
 
 
 int Agent::randomRoom() {
-    return 0;
+    //return 0;
     return rand() % this->roomCount;
 }
 
 int Agent::randomTime() {
     return rand() % 25 + 5;
 }
-int Agent::msgId() {
-    return time(0) + rand() % 3000;
-}
 
 void Agent::startContest(Contest contest) {
     Message m;
-    m.org = msgId();
     m.contest = contest;
     m.lamportClock = this->lamport->getTimestamp();
     m.processId = this->lamport->rank;
     lamport->broadcast(m, MessageTag(StartContest));
 
-    printf("%d: \t %d -->  broadcast - StartContest o pokoj %d\n",
-           this->lamport->getTimestamp(), this->lamport->rank, contest.room);
+    printf("%d: \t %d -->  broadcast - StartContest o pokoj %d, id: %d\n",
+           this->lamport->getTimestamp(), this->lamport->rank, contest.room, contest.id);
 
 }
 
 
 void Agent::sendInvite(Contest contest) {
     Message m;
-    m.org = msgId();
     m.contest = contest;
     m.lamportClock = this->lamport->getTimestamp();
     m.processId = this->lamport->rank;
     lamport->broadcast(m, MessageTag(Invite));
 
-    printf("%d: \t %d -->  broadcast - Invite do pokoj %d\n",
-           this->lamport->getTimestamp(), this->lamport->rank, contest.room);
+    printf("%d: \t %d -->  broadcast - Invite do pokoj %d, id: %d\n",
+           this->lamport->getTimestamp(), this->lamport->rank, contest.room, contest.id);
 }

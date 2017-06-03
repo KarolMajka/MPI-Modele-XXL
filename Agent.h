@@ -24,6 +24,8 @@ protected:
     int selectedRoom;
     int answerCount;
     int roomCount;
+    bool * openRooms;
+    bool notFree;
 
     time_t restTill;
 
@@ -33,7 +35,10 @@ protected:
 
     bool wannaCreateContest();
     int randomRoom();
+    int msgId();
     void askForRoom();
+    void restOpenRooms();
+    bool isRoomFree();
     int randomTime();
     bool wannaJoin(Message m);
     bool shouldBeFirst(Message m);

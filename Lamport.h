@@ -23,6 +23,7 @@ struct Contest {
 };
 
 struct Message {
+    int org;
     Contest contest;
     int processId;
     int lamportClock;

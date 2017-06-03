@@ -10,6 +10,7 @@
 
 Agent::Agent(int size, int rank, int roomCount) {
     this->lamport = new Lamport(size, rank);
+    this->openRooms = (bool*) malloc(sizeof(bool) * size);
     this->roomCount = roomCount;
     this->answerCount = size-1;
     this->selectedRoom = -1;
@@ -19,7 +20,27 @@ Agent::Agent(int size, int rank, int roomCount) {
     this->state = IDLE;
     this->lamportClockOnRequest = -1;
     srand(time(NULL)+rank*size*1000);
+    this->restOpenRooms();
+    this->notFree = false;
 }
+
+
+void Agent::restOpenRooms() {
+    for(int i=0; i < this->lamport->size; i++) {
+        this->openRooms[i] = false;
+    }
+    this->openRooms[this->lamport->rank] = true;
+}
+
+bool Agent::isRoomFree() {
+    for(int i=0; i < this->lamport->size; i++) {
+        if (this->openRooms[i] ==  false) {
+            return false;
+        }
+    }
+    return true;
+}
+
 
 
 
@@ -51,7 +72,7 @@ void Agent::doStuff() {
         }
 
         case WAITING_FOR_ROOM: {
-            if (this->answerCount == 0) {
+            if (isRoomFree()) {
                 this->state = WAITING_FOR_ANSWERS;
                 this->answerCount = lamport->size - 1;
 
@@ -63,7 +84,7 @@ void Agent::doStuff() {
                 c.time = -1;
 
                 sendInvite(c);
-            } else if (this->answerCount < 0) {
+            } else if (this->notFree) {
                 askForRoom();
             }
             break;
@@ -105,9 +126,10 @@ void Agent::doStuff() {
 void Agent::askForRoom() {
     Message msg;
     Contest c;
-
+    this->notFree = false;
     this->selectedRoom = this->randomRoom();
     c.room = this->selectedRoom;
+    msg.org = msgId();
     msg.contest = c;
     msg.lamportClock = this->lamport->getTimestamp();
     msg.processId = this->lamport->rank;
@@ -123,6 +145,7 @@ void Agent::askForRoom() {
 
 void Agent::answerInvite(Message m, bool answer) {
     Message msg;
+    msg.org = m.org;
     msg.contest = m.contest;
     msg.lamportClock = this->lamport->getTimestamp();
     msg.processId = this->lamport->rank;
@@ -146,6 +169,7 @@ void Agent::handleRoom(Message m) {
     // true - pokoj jest wolny
 
     Message msg;
+    msg.org = m.org;
     msg.contest = m.contest;
     msg.lamportClock = this->lamport->getTimestamp();
     msg.processId = this->lamport->rank;
@@ -184,6 +208,7 @@ void Agent::handleAnswerInvite(Message m) {
 void Agent::handleAnswerRoom(Message m) {
     if (this->state == WAITING_FOR_ROOM) {
         if (!m.answer) {
+            this->notFree = true;
             this->answerCount = -1;
         }
         else {
@@ -276,9 +301,13 @@ int Agent::randomRoom() {
 int Agent::randomTime() {
     return rand() % 25 + 5;
 }
+int Agent::msgId() {
+    return time(0) + rand() % 3000;
+}
 
 void Agent::startContest(Contest contest) {
     Message m;
+    m.org = msgId();
     m.contest = contest;
     m.lamportClock = this->lamport->getTimestamp();
     m.processId = this->lamport->rank;
@@ -292,6 +321,7 @@ void Agent::startContest(Contest contest) {
 
 void Agent::sendInvite(Contest contest) {
     Message m;
+    m.org = msgId();
     m.contest = contest;
     m.lamportClock = this->lamport->getTimestamp();
     m.processId = this->lamport->rank;

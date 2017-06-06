@@ -7,6 +7,7 @@
 
 #include <string>
 #include <iostream>
+#include <stdlib.h>
 #include "Lamport.h"
 
 enum State {
@@ -15,7 +16,6 @@ enum State {
     REST,
     WAITING_FOR_ANSWERS,
     WAITING_FOR_ROOM,
-
 };
 
 class Agent {

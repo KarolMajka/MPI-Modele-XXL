@@ -4,7 +4,6 @@
 
 #include <zconf.h>
 #include "Agent.h"
-#include "Lamport.h"
 
 
 
